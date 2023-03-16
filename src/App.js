@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 import MoviesList from './components/MoviesList';
 import AddMovie from './components/AddMovie';
+import Button from './components/Button';
 import './App.css';
 
 function App() {
@@ -9,37 +10,14 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchSWMoviesHandler = useCallback(async () => {
+  const swEndpoint = 'https://swapi.dev/api/films/';
+  const fbEndpoint = 'https://react-http-24436-default-rtdb.firebaseio.com/movies.json';
+
+  const fetchMoviesHandler = useCallback(async (endpoint, flag) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('https://swapi.dev/api/films/');
-      
-      if(!response.ok) {
-        throw new Error('Something went wrong');
-      }
-
-      const data = await response.json();
-      const transformedMovies = data.results.map(movieData => {
-        return {
-          id: movieData.episode_id,
-          title: movieData.title,
-          openingText: movieData.opening_crawl,
-          releaseDate: movieData.release_date
-        };
-      });
-      setMovies(transformedMovies);
-    } catch (error) {
-      setError(error.message);
-    }
-    setIsLoading(false);  
-  }, []);
-
-  const fetchMoviesHandler = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('https://react-http-24436-default-rtdb.firebaseio.com/movies.json');
+      const response = await fetch(endpoint);
       
       if(!response.ok) {
         throw new Error('Something went wrong');
@@ -47,18 +25,29 @@ function App() {
 
       const data = await response.json();
 
-      const loadedMovies = [];
+      if (flag === 'sw') {
+        const transformedMovies = data.results.map(movieData => {
+          return {
+            id: movieData.episode_id,
+            title: movieData.title,
+            openingText: movieData.opening_crawl,
+            releaseDate: movieData.release_date
+          };
+        });
+        setMovies(transformedMovies);  
+      } else if (flag === 'fb') {
+        const loadedMovies = [];
 
-      for (const key in data ) {
-        loadedMovies.push({
-          id: key,
-          title: data[key].title,
-          openingText: data[key].openingText,
-          releaseDate: data[key].releaseDate
-        })
+        for (const key in data ) {
+          loadedMovies.push({
+            id: key,
+            title: data[key].title,
+            openingText: data[key].openingText,
+            releaseDate: data[key].releaseDate
+          })
+        }
+        setMovies(loadedMovies);
       }
-     
-      setMovies(loadedMovies);
     } catch (error) {
       setError(error.message);
     }
@@ -66,8 +55,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetchSWMoviesHandler();
-  }, [fetchSWMoviesHandler]);
+    fetchMoviesHandler(swEndpoint, 'sw');
+  }, [fetchMoviesHandler]);
 
   async function addMovieHandler(movie) {
     setError(null);
@@ -84,7 +73,7 @@ function App() {
         throw new Error('Something went wrong');
       }
 
-      const data = await  response.json();
+      const data = await response.json();
       console.log(data);
     } catch (error) {
       setError(error.message);
@@ -109,8 +98,8 @@ function App() {
         <AddMovie onAddMovie={addMovieHandler} />
       </section>
       <section className="actions">
-        <button onClick={fetchSWMoviesHandler}>Fetch Star Wars Movies</button>
-        <button onClick={fetchMoviesHandler}>Fetch Movies</button>
+        <Button onClick={fetchMoviesHandler} endpoint={swEndpoint} flag='sw'>Fetch Star Wars Movies</Button>
+        <Button onClick={fetchMoviesHandler} endpoint={fbEndpoint} flag='fb'>Fetch Movies</Button>
       </section>
       <section>
         {content}
